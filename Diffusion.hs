@@ -1,11 +1,51 @@
 {-# LANGUAGE KindSignatures, TypeOperators, NoMonomorphismRestriction #-}
 
 
-module Diffusion (diffusion, stepIo) where
-import qualified Data.Array.Repa as R
-import qualified Data.Array.Repa.IO.BMP as RIOB
-import qualified Data.Array.Repa.IO.Matrix as RIOM
-import Data.List 
+module Diffusion (diffusion) where
+import Data.Vector
+import qualified Data.Vector.Unboxed as V
+
+a :: Vector Integer
+a = fromList [10,20,30,40]
+
+b :: Vector Integer
+b = Data.Vector.replicate 10 2
+
+c :: Vector Int
+c = generate 10 (^2)
+
+two_dim :: Vector (Vector Int)
+two_dim = generate 10 (\n -> Data.Vector.replicate 10 n)
+
+
+size :: Int
+size = 10
+
+data DiffusionProcess = LeftBoundary | Middle | RightBoundary
+
+diffusion_steps :: [DiffusionProcess]
+diffusion_steps = [LeftBoundary] Prelude.++ Prelude.replicate size Middle Prelude.++ [RightBoundary]
+
+type DiffusionRuntime = ([DiffusionProcess], Vector Double, Int) 
+
+runDiffusionProcess :: DiffusionRuntime -> DiffusionRuntime
+runDiffusionProcess (LeftBoundary:dps, cells, s) = runDiffusionProcess (dps, diffuse (LeftBoundary, cells,s), s)
+runDiffusionProcess (Middle:dps, cells, s) = runDiffusionProcess (dps, diffuse (Middle, cells,s), s)
+runDiffusionProcess ([RightBoundary],cells,s) = ([], diffuse (RightBoundary, cells,s), s)
+
+diffuse :: (DiffusionProcess, Vector Double, Int) -> Vector Double
+diffuse (LeftBoundary, cells, s) = cells
+diffuse (Middle, cells, s) = cells
+diffuse (RightBoundary, cells, s) = cells
+
+instance Show DiffusionProcess where
+  show (LeftBoundary) = "LeftBoundary"
+  show (Middle) = "Middle"
+  show (RightBoundary) = "RightBoundary"
+
+
+--diffuse :: Vector Double -> Vector Double
+
 
 {- |
      This contains blah blah blah
@@ -15,50 +55,3 @@ import Data.List
 -}
 diffusion :: ()
 diffusion = ()
-
--- point
-type DIM0 = R.DIM0
--- vector
-type DIM1 = R.DIM1
-
---space
-nx :: Int
-nx = 10
-
-lx :: Double
-lx = 1.0
-
-dx :: Double
-dx = lx /  fromIntegral nx
-
---time
-nt :: Int
-nt = 10
-
-lt :: Double
-lt = 1.0
-
-dt :: Double
-dt = lt /  fromIntegral nt
-
-cj :: R.Array R.U DIM1 Double
-cj = R.fromListUnboxed (R.Z R.:. (nx::Int)) [dx,dx+dx..lx]
-
-cjp :: R.Array R.D DIM1 Double
-cjp = R.map (+1) cj
-
-
-runOneTimeStep ::  R.Array R.U DIM1 Double -> R.Array R.D DIM1 Double
-runOneTimeStep c = R.map (+1) c
-
-stepIo ::R.Array R.U DIM1 Double -> IO (R.Array R.U DIM1 Double)
-stepIo c = R.computeP (runOneTimeStep c) :: IO (R.Array R.U R.DIM1 Double)
-
-
-main :: IO ()
-main = do
-  print cj
-  z <- stepIo cj
-  print z
-  z2 <- stepIo z
-  print z2
