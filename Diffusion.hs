@@ -24,28 +24,29 @@ two_dim = generate 10 (\n -> Data.Vector.replicate 10 n)
 {- |
     This data allows us to differentiate between using boundary conditions or not during diffusion iterations on spatial grid. 
 -}
-data DiffusionProcess = LeftBoundary | Middle | RightBoundary
+data DiffusionProcess a = Middle | LeftBoundaryConstant a | RightBoundaryConstant a
+                        deriving (Eq, Ord)
 
 {- |
     Essentially the phase space and parameters.  List of boundary conditions, 'old' density space, 'new' density space, dt, and dx. 
 -}
-type DiffusionRuntime = ([DiffusionProcess], Vector Double, Vector Double, Double, Double) 
+type DiffusionRuntime = ([DiffusionProcess Double], Vector Double, Vector Double, Double, Double) 
 
 {- |
     Marches through spatial dimension and applies diffusion function recursively.
 -}
 runDiffusionProcess :: DiffusionRuntime -> DiffusionRuntime
-runDiffusionProcess (LeftBoundary:dps, old_cells, new_cells, dt, dx) = runDiffusionProcess (dps, old_cells,                    new_cells Data.Vector.++ diffuse(LeftBoundary,  Data.Vector.take 2 old_cells, dt, dx), dt, dx)
+runDiffusionProcess (LeftBoundaryConstant a :dps, old_cells, new_cells, dt, dx) = runDiffusionProcess (dps, old_cells,                    new_cells Data.Vector.++ diffuse(LeftBoundaryConstant a,  Data.Vector.take 2 old_cells, dt, dx), dt, dx)
 runDiffusionProcess (Middle:dps,       old_cells, new_cells, dt, dx) = runDiffusionProcess (dps, Data.Vector.drop 1 old_cells, new_cells Data.Vector.++ diffuse(Middle,        Data.Vector.take 3 old_cells, dt, dx), dt, dx)
-runDiffusionProcess ([RightBoundary],  old_cells, new_cells, dt, dx) =                     ([],  old_cells,                    new_cells Data.Vector.++ diffuse(RightBoundary, Data.Vector.take 2 old_cells, dt, dx), dt, dx)
+runDiffusionProcess ([RightBoundaryConstant a],  old_cells, new_cells, dt, dx) =                     ([],  old_cells,                    new_cells Data.Vector.++ diffuse(RightBoundaryConstant a, Data.Vector.take 2 old_cells, dt, dx), dt, dx)
 
 {- |
     Computes new density value for next time step for a cell based on adjacent cells in current time step. 
 -}
-diffuse :: (DiffusionProcess, Vector Double, Double, Double) -> Vector Double
-diffuse (LeftBoundary,  cells, dt, dx)  = fromList ([(cells ! 0) + (dt/(dx*dx))*((cells ! 1) - 2.0*(cells ! 0) + (5.0))])                                          
+diffuse :: (DiffusionProcess Double, Vector Double, Double, Double) -> Vector Double
+diffuse (LeftBoundaryConstant a,  cells, dt, dx)  = fromList ([(cells ! 0) + (dt/(dx*dx))*((cells ! 1) - 2.0*(cells ! 0) + (a))])                                          
 diffuse (Middle,        cells, dt, dx)  = fromList ([(cells ! 1) + (dt/(dx*dx))*((cells ! 2) - 2.0*(cells ! 1) + (cells ! 0))])
-diffuse (RightBoundary, cells, dt, dx)  = fromList ([(cells ! 1) + (dt/(dx*dx))*((0.0) - 2.0*(cells ! 1) + (cells ! 0))])
+diffuse (RightBoundaryConstant a, cells, dt, dx)  = fromList ([(cells ! 1) + (dt/(dx*dx))*((a) - 2.0*(cells ! 1) + (cells ! 0))])
 
 {- |
     Sum square of a Vector.
@@ -70,8 +71,8 @@ initialRuntime = (diffusion_steps, Data.Vector.replicate 20 1.0, fromList [], 0.
 {- |
     Describe our spatial geometry using a list.
 -}
-diffusion_steps :: [DiffusionProcess]
-diffusion_steps = [LeftBoundary] Prelude.++ Prelude.replicate 18 Middle Prelude.++ [RightBoundary]
+diffusion_steps :: [DiffusionProcess Double]
+diffusion_steps = [LeftBoundaryConstant 5.0] Prelude.++ Prelude.replicate 18 Middle Prelude.++ [RightBoundaryConstant 0.0]
 
 {- |
     This is the iterative diffusion process which first checks for convergence otherwise recurses.
@@ -99,11 +100,12 @@ runDiffusionUntilConvergence = do print ("init runtime: ", initialRuntime)
 {- |
     How to display DiffusionProcess.  Although DiffusionProcess could have just 'derived' Show, I just did this explicitly instead.
 -}
-instance Show DiffusionProcess where
-  show (LeftBoundary) = "LeftBoundary"
+instance Show (DiffusionProcess a) where
+  --show (LeftBoundary) = "LeftBoundary"
   show (Middle) = "Middle"
-  show (RightBoundary) = "RightBoundary"
-
+  --show (RightBoundary) = "RightBoundary"
+  show (LeftBoundaryConstant a) = "LeftBoundaryConstant"
+  show (RightBoundaryConstant a) = "RightBoundaryConstant"
 
 --diffuse :: Vector Double -> Vector Double
 
