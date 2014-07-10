@@ -21,22 +21,10 @@ two_dim = generate 10 (\n -> Data.Vector.replicate 10 n)
 -- /examples
 --
 
-cells_init :: Vector Double
-cells_init = Data.Vector.replicate size 1.0
-
-size :: Int
-size = 2
-
 {- |
     This data allows us to differentiate between using boundary conditions or not during diffusion iterations on spatial grid. 
 -}
 data DiffusionProcess = LeftBoundary | Middle | RightBoundary
-
-{- |
-    Describe our spatial geometry using a list.
--}
-diffusion_steps :: [DiffusionProcess]
-diffusion_steps = [LeftBoundary] Prelude.++ Prelude.replicate size Middle Prelude.++ [RightBoundary]
 
 {- |
     Essentially the phase space and parameters.  List of boundary conditions, 'old' density space, 'new' density space, dt, and dx. 
@@ -47,7 +35,7 @@ type DiffusionRuntime = ([DiffusionProcess], Vector Double, Vector Double, Doubl
     Marches through spatial dimension and applies diffusion function recursively.
 -}
 runDiffusionProcess :: DiffusionRuntime -> DiffusionRuntime
-runDiffusionProcess (LeftBoundary:dps, old_cells, new_cells, dt, dx) = runDiffusionProcess (dps, old_cells,                    new_cells Data.Vector.++ diffuse(LeftBoundary,  Data.Vector.take  2 old_cells, dt, dx), dt, dx)
+runDiffusionProcess (LeftBoundary:dps, old_cells, new_cells, dt, dx) = runDiffusionProcess (dps, old_cells,                    new_cells Data.Vector.++ diffuse(LeftBoundary,  Data.Vector.take 2 old_cells, dt, dx), dt, dx)
 runDiffusionProcess (Middle:dps,       old_cells, new_cells, dt, dx) = runDiffusionProcess (dps, Data.Vector.drop 1 old_cells, new_cells Data.Vector.++ diffuse(Middle,        Data.Vector.take 3 old_cells, dt, dx), dt, dx)
 runDiffusionProcess ([RightBoundary],  old_cells, new_cells, dt, dx) =                     ([],  old_cells,                    new_cells Data.Vector.++ diffuse(RightBoundary, Data.Vector.take 2 old_cells, dt, dx), dt, dx)
 
@@ -77,7 +65,13 @@ isConverged v1 v2 thresh =  sqrt (sumSqr (Data.Vector.zipWith (-) v2 v1)) < thre
     The initial phase space.
 -}
 initialRuntime :: DiffusionRuntime
-initialRuntime = (diffusion_steps, fromList [1.0,2.0,3.0,4.0], fromList [], 0.1, 1.0)
+initialRuntime = (diffusion_steps, Data.Vector.replicate 20 1.0, fromList [], 0.1, 1.0)
+
+{- |
+    Describe our spatial geometry using a list.
+-}
+diffusion_steps :: [DiffusionProcess]
+diffusion_steps = [LeftBoundary] Prelude.++ Prelude.replicate 18 Middle Prelude.++ [RightBoundary]
 
 {- |
     This is the iterative diffusion process which first checks for convergence otherwise recurses.
