@@ -21,11 +21,12 @@ two_dim = generate 10 (\n -> Data.Vector.replicate 10 n)
 -- /examples
 --
 
-data Cell a = ConstCell a | ComputedCell a
-data BC a = ConstBC a | ReflectiveBC | PeriodicBC
+data Cell a = ConstCell a | ComputedCell a | ConstBC a | ReflectiveBC | PeriodicBC
 
-type PhaseSpace a = (BC a, [Cell a], BC a)
-type IterativePhaseSpace a = (Int, PhaseSpace a, PhaseSpace a)
+type OldCells a = [Cell a]
+type NewCells a = [Cell a]
+
+type IterativePhaseSpace a = (Int, OldCells a, NewCells a)
 
 iterateNeighborhoodDiffusion :: IterativePhaseSpace a -> IterativePhaseSpace a
 iterateNeighborhoodDiffusion a
@@ -37,7 +38,16 @@ iterationsAreConverged :: IterativePhaseSpace a -> IterativePhaseSpace a -> Bool
 iterationsAreConverged old new = False
 
 marchNeighborhoodDiffusion :: IterativePhaseSpace a -> IterativePhaseSpace a
-marchNeighborhoodDiffusion (iter, (ConstBC a, ComputedCell z: old_cells, ConstBC b),(ConstBC c, new_cells, ConstBC d))  = (iter, (ConstBC a, new_cells, ConstBC b), (ConstBC a, old_cells, ConstBC b))
+--marchNeighborhoodDiffusion (iter, ConstBC l : ComputedCell c: oldCells, newCells)  =  (iter, [ComputedCell c] Prelude.++ oldCells, newCells Prelude.++ [ConstBC l, diffuseNeighbors ( (ComputedCell l) (ComputedCell c) (oldCells ! 0) )])
+--marchNeighborhoodDiffusion (iter, ConstBC l : ConstCell c: oldCells, new_cells)  =  (iter, ConstBC l,    ConstBC r,    old_cells, new_cells Prelude.++ [ConstCell c])
+--marchNeighborhoodDiffusion (iter, ConstBC l,    ConstBC r,    [],                        new_cells)  =  (iter, ConstBC l,    ConstBC r,    [],        new_cells)
+--marchNeighborhoodDiffusion (iter, ConstBC l,    ConstBC r,    [],                        new_cells)  =  (iter, ConstBC l,    ConstBC r,    [],        new_cells)
+--marchNeighborhoodDiffusion (iter, ReflectiveBC, ReflectiveBC, ComputedCell c: old_cells, new_cells)  =  (iter, ReflectiveBC, ReflectiveBC, old_cells, new_cells Prelude.++ [ComputedCell c])
+--marchNeighborhoodDiffusion (iter, ReflectiveBC, ReflectiveBC, ConstCell c: old_cells,    new_cells)  =  (iter, ReflectiveBC, ReflectiveBC, old_cells, new_cells Prelude.++ [ConstCell c])
+--marchNeighborhoodDiffusion (iter, ReflectiveBC, ReflectiveBC, [],                        new_cells)  =  (iter, ReflectiveBC, ReflectiveBC, [],        new_cells)
+--marchNeighborhoodDiffusion (iter, PeriodicBC,   PeriodicBC,   ComputedCell c: old_cells, new_cells)  =  (iter, PeriodicBC,   PeriodicBC,   old_cells, new_cells Prelude.++ [ComputedCell c])
+--marchNeighborhoodDiffusion (iter, PeriodicBC,   PeriodicBC,   ConstCell c: old_cells,    new_cells)  =  (iter, PeriodicBC,   PeriodicBC,   old_cells, new_cells Prelude.++ [ConstCell c])
+--marchNeighborhoodDiffusion (iter, PeriodicBC,   PeriodicBC,   [],                        new_cells)  =  (iter, PeriodicBC,   PeriodicBC,   [],        new_cells)
 
 
 diffuseNeighbors :: Cell a -> Cell a -> Cell a -> Cell a
