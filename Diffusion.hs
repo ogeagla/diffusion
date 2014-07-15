@@ -1,9 +1,13 @@
 {-# LANGUAGE KindSignatures, TypeOperators, NoMonomorphismRestriction #-}
 
 
-module Diffusion (diffusion) where
+module Diffusion (diffusion, main) where
 import Data.Vector
 import qualified Data.Vector.Unboxed as V
+import System.Environment   
+import System.Directory  
+import System.IO  
+import Data.List  
 
 --
 -- examples
@@ -20,60 +24,21 @@ two_dim :: Vector (Vector Int)
 two_dim = generate 10 (\n -> Data.Vector.replicate 10 n)
 -- /examples
 --
+main = do
+  txt <- readFile "mydata.dat"
+  let dat = Diffusion.conv txt
+  print dat -- this prints out my chunk of data
+  return ()
 
-data Cell a = ConstCell a | ComputedCell a | ConstBC a | ReflectiveBC | PeriodicBC
+conv :: [Char] -> [[Double]]
+conv x = Data.List.map (Data.List.map read . words) (lines x)
 
-type OldCells a = [Cell a]
-type NewCells a = [Cell a]
+run1D :: [String] -> IO ()
+run1D [fileName] = appendFile fileName ("testing" Data.List.++ "\n") 
 
-type IterativePhaseSpace a = (Int, OldCells a, NewCells a)
-
-iterateNeighborhoodDiffusion :: IterativePhaseSpace a -> IterativePhaseSpace a
-iterateNeighborhoodDiffusion a
-  | iterationsAreConverged a b = b 
-  | otherwise = iterateNeighborhoodDiffusion b
-  where b = marchNeighborhoodDiffusion a
-
-iterationsAreConverged :: IterativePhaseSpace a -> IterativePhaseSpace a -> Bool
-iterationsAreConverged old new = False
-
-marchNeighborhoodDiffusion :: IterativePhaseSpace a -> IterativePhaseSpace a
---marchNeighborhoodDiffusion (iter, ConstBC l : ComputedCell c: oldCells, newCells)  =  (iter, [ComputedCell c] Prelude.++ oldCells, newCells Prelude.++ [ConstBC l, diffuseNeighbors ( (ComputedCell l) (ComputedCell c) (oldCells ! 0) )])
---marchNeighborhoodDiffusion (iter, ConstBC l : ConstCell c: oldCells, new_cells)  =  (iter, ConstBC l,    ConstBC r,    old_cells, new_cells Prelude.++ [ConstCell c])
---marchNeighborhoodDiffusion (iter, ConstBC l,    ConstBC r,    [],                        new_cells)  =  (iter, ConstBC l,    ConstBC r,    [],        new_cells)
---marchNeighborhoodDiffusion (iter, ConstBC l,    ConstBC r,    [],                        new_cells)  =  (iter, ConstBC l,    ConstBC r,    [],        new_cells)
---marchNeighborhoodDiffusion (iter, ReflectiveBC, ReflectiveBC, ComputedCell c: old_cells, new_cells)  =  (iter, ReflectiveBC, ReflectiveBC, old_cells, new_cells Prelude.++ [ComputedCell c])
---marchNeighborhoodDiffusion (iter, ReflectiveBC, ReflectiveBC, ConstCell c: old_cells,    new_cells)  =  (iter, ReflectiveBC, ReflectiveBC, old_cells, new_cells Prelude.++ [ConstCell c])
---marchNeighborhoodDiffusion (iter, ReflectiveBC, ReflectiveBC, [],                        new_cells)  =  (iter, ReflectiveBC, ReflectiveBC, [],        new_cells)
---marchNeighborhoodDiffusion (iter, PeriodicBC,   PeriodicBC,   ComputedCell c: old_cells, new_cells)  =  (iter, PeriodicBC,   PeriodicBC,   old_cells, new_cells Prelude.++ [ComputedCell c])
---marchNeighborhoodDiffusion (iter, PeriodicBC,   PeriodicBC,   ConstCell c: old_cells,    new_cells)  =  (iter, PeriodicBC,   PeriodicBC,   old_cells, new_cells Prelude.++ [ConstCell c])
---marchNeighborhoodDiffusion (iter, PeriodicBC,   PeriodicBC,   [],                        new_cells)  =  (iter, PeriodicBC,   PeriodicBC,   [],        new_cells)
-
-
-diffuseNeighbors :: Cell a -> Cell a -> Cell a -> Cell a
-diffuseNeighbors (ComputedCell a) (ComputedCell b) (ComputedCell c) = ComputedCell a
-
-
-
-{- |
-  Used like so:
-  $ *Diffusion> let a = Cell 1.0
-  $ *Diffusion> fmap (+1.0) a
-  $Cell 2.0
-
--}
-{-instance Functor DiffusionCell where
-  fmap f (Cell a) = Cell (f a)
-  fmap f (BCConst a) = BCConst (f a)
-  fmap f (BCReflect) = BCReflect
-  fmap f (BCPeriodic) = BCPeriodic
-
-diffu :: (DiffusionCell a, DiffusionCell a, DiffusionCell a) -> DiffusionCell a
-diffu (Cell a,Cell b,Cell c) = Cell a
-diffu (BCConst a, Cell b, Cell c) = Cell b
-diffu (Cell a, Cell b, BCConst c) = Cell b
--}
-
+dispatch :: [(String, [String] -> IO ())]  
+dispatch =  [ ("run1D", run1D)
+            ]  
 
 {- |
     This data allows us to differentiate between using boundary conditions or not during diffusion iterations on spatial grid. 
@@ -179,11 +144,14 @@ diffusion = ()
     >>> main
     IO ()
 -}
-main :: IO ()
-main = do 
-  putStrLn "The result is: "
-
-
+{-main :: IO ()
+main = do  
+    (command:args) <- getArgs  
+    let (Just action) = lookup command dispatch  
+    action args  
+    content <- readFile "input.txt"
+    print $ lines $ content
+    -}
 {- |
 Next thing to do is solve implicit using matrix solve via GS see: http://www3.nd.edu/~jjwteach/441/PdfNotes/lecture16.pdf
 https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm#Python
