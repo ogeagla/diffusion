@@ -1,7 +1,7 @@
 {-# LANGUAGE KindSignatures, TypeOperators, NoMonomorphismRestriction #-}
 
 
-module Diffusion (diffusion, main) where
+module Diffusion (diffusion, main, runDiffusionUntilConvergence) where
 import Data.Vector
 import qualified Data.Vector.Unboxed as V
 import System.Environment   
@@ -9,21 +9,6 @@ import System.Directory
 import System.IO  
 import Data.List  
 
---
--- examples
-a :: Vector Integer
-a = fromList [10,20,30,40]
-
-b :: Vector Integer
-b = Data.Vector.replicate 10 2
-
-c :: Vector Int
-c = generate 10 (^2)
-
-two_dim :: Vector (Vector Int)
-two_dim = generate 10 (\n -> Data.Vector.replicate 10 n)
--- /examples
---
 main = do
   txt <- readFile "mydata.dat"
   let dat = Diffusion.conv txt
@@ -87,6 +72,10 @@ isConverged v1 v2 thresh =  sqrt (sumSqr (Data.Vector.zipWith (-) v2 v1)) < thre
 initialRuntime :: DiffusionRuntime
 initialRuntime = (diffusion_steps, Data.Vector.replicate 20 1.0, fromList [], 0.1, 1.0)
 
+initialRuntime2 :: DiffusionRuntime
+initialRuntime2 = (diffusion_steps, Data.Vector.replicate 20 1.0, fromList [], 2.0, 2.0)
+
+
 {- |
     Describe our spatial geometry using a list.
 -}
@@ -144,16 +133,17 @@ diffusion = ()
     >>> main
     IO ()
 -}
-{-main :: IO ()
-main = do  
-    (command:args) <- getArgs  
-    let (Just action) = lookup command dispatch  
-    action args  
-    content <- readFile "input.txt"
-    print $ lines $ content
-    -}
+main :: IO ()
+--main = do
+--    (command:args) <- getArgs
+--    let (Just action) = lookup command dispatch
+--    action args
+--    content <- readFile "input.txt"
+--    print $ lines $ content
 {- |
 Next thing to do is solve implicit using matrix solve via GS see: http://www3.nd.edu/~jjwteach/441/PdfNotes/lecture16.pdf
 https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm#Python
 http://www.haskell.org/haskellwiki/Numeric_Haskell:_A_Vector_Tutorial#Array_Types
 -}
+
+--As an inverse of show, need to impl read for the various data types to be able to read them from text file
