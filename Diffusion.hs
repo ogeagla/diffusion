@@ -7,23 +7,43 @@ import qualified Data.Vector.Unboxed as V
 import System.Environment   
 import System.Directory  
 import System.IO  
-import Data.List  
+import Data.List
+import Data.List.Split (splitOn)
 
 main = do
-  txt <- readFile "mydata.dat"
-  let dat = Diffusion.conv txt
-  print dat -- this prints out my chunk of data
+  txtData <- readFile "mydata.dat"
+  txtParams <- readFile "myparams.dat"
+  let dataMat = Diffusion.convData txtData
+  print dataMat -- this prints out my chunk of data
+  let dataVecs = Diffusion.dataToVec dataMat
+  let bcs = Diffusion.convToBC txtParams
+  print dataVecs
+  print txtParams
+  print bcs
   return ()
 
-conv :: [Char] -> [[Double]]
-conv x = Data.List.map (Data.List.map read . words) (lines x)
+convData :: [Char] -> [[Double]]
+convData x = Data.List.map (Data.List.map read . words) (lines x)
 
-run1D :: [String] -> IO ()
-run1D [fileName] = appendFile fileName ("testing" Data.List.++ "\n") 
+strToBC :: String -> DiffusionProcess Double
+strToBC "M" = Middle
+strToBC ('L':'B':'C':' ':number) = LeftBoundaryConstant (read number)
+strToBC ('R':'B':'C':' ':number) = RightBoundaryConstant (read number)
 
-dispatch :: [(String, [String] -> IO ())]  
-dispatch =  [ ("run1D", run1D)
-            ]  
+
+convToBC :: [Char] -> [[DiffusionProcess Double]]
+convToBC x = Data.List.map (Data.List.map strToBC . splitOn ",") (lines x)
+
+dataToVec :: [[Double]] -> [Vector Double]
+dataToVec d = Data.List.map fromList d
+
+{- |
+    This is currently being used to run the iterations and print out the results.
+    I want to avoid putting logic here and not have to call the first iteration explicitly, but for simplicity I have not yet refactored this out.
+-}
+runDiffusionUntilConvergence :: IO ()
+runDiffusionUntilConvergence = do print ("init runtime: ", initialRuntime)
+                                  print (iterateDiffusion initialRuntime (runDiffusionProcess initialRuntime) convergence_threshold 1)
 
 {- |
     This data allows us to differentiate between using boundary conditions or not during diffusion iterations on spatial grid. 
@@ -97,13 +117,6 @@ iterateDiffusion (dps1, old1, new1, dt1, dx1) (dps2, old2, new2, dt2, dx2) thres
 convergence_threshold :: Double
 convergence_threshold = 0.0005
 
-{- |
-    This is currently being used to run the iterations and print out the results.
-    I want to avoid putting logic here and not have to call the first iteration explicitly, but for simplicity I have not yet refactored this out.
--}
-runDiffusionUntilConvergence :: IO ()
-runDiffusionUntilConvergence = do print ("init runtime: ", initialRuntime)
-                                  print (iterateDiffusion initialRuntime (runDiffusionProcess initialRuntime) convergence_threshold 1)
 
 {- |
     How to display DiffusionProcess.  Although DiffusionProcess could have just 'derived' Show, I just did this explicitly instead.
